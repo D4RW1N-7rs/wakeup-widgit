@@ -26,7 +26,7 @@ class TestWakeWidget(unittest.TestCase):
         self.activity_detected_count = 0
 
         self.sm = WakeStateMachine(
-            idle_delay_seconds=15.0,
+            idle_delay_seconds=10.0,
             timer_duration_seconds=240.0,
             on_state_changed=lambda old, new: self.state_changes.append((old, new)),
             on_alert_triggered=self._on_alert_triggered,
@@ -43,40 +43,40 @@ class TestWakeWidget(unittest.TestCase):
     def _on_activity_detected(self) -> None:
         self.activity_detected_count += 1
 
-    def test_state_active_while_idle_under_15s(self) -> None:
-        """User inactive for < 15s keeps state in ACTIVE without starting countdown."""
+    def test_state_active_while_idle_under_10s(self) -> None:
+        """User inactive for < 10s keeps state in ACTIVE without starting countdown."""
         self.assertEqual(self.sm.update(0.0), STATE_ACTIVE)
         self.assertEqual(self.sm.update(5.0), STATE_ACTIVE)
-        self.assertEqual(self.sm.update(14.9), STATE_ACTIVE)
+        self.assertEqual(self.sm.update(9.9), STATE_ACTIVE)
         self.assertEqual(self.sm.countdown_remaining, 240.0)
         self.assertEqual(self.alert_triggered_count, 0)
 
-    def test_state_countdown_starts_after_15s(self) -> None:
-        """Inactivity of 15s starts 4-minute timer counting down."""
-        # Step through to 15s
+    def test_state_countdown_starts_after_10s(self) -> None:
+        """Inactivity of 10s starts 4-minute timer counting down."""
+        # Step through to 10s
         self.sm.update(5.0)
-        self.sm.update(15.0)
+        self.sm.update(10.0)
         self.assertEqual(self.sm.state, STATE_COUNTDOWN)
         self.assertAlmostEqual(self.sm.countdown_remaining, 240.0, delta=0.1)
 
-        # Inactive for 75s (15s idle + 60s in timer)
-        self.sm.update(75.0)
+        # Inactive for 70s (10s idle + 60s in timer)
+        self.sm.update(70.0)
         self.assertEqual(self.sm.state, STATE_COUNTDOWN)
         self.assertAlmostEqual(self.sm.countdown_remaining, 180.0, delta=0.1)
 
-        # Inactive for 254s (1s left of 4-min timer)
-        self.sm.update(254.0)
+        # Inactive for 249s (1s left of 4-min timer)
+        self.sm.update(249.0)
         self.assertEqual(self.sm.state, STATE_COUNTDOWN)
         self.assertAlmostEqual(self.sm.countdown_remaining, 1.0, delta=0.1)
         self.assertEqual(self.alert_triggered_count, 0)
 
     def test_alert_triggers_when_4min_is_hit(self) -> None:
-        """Inactivity of 255s (15s + 240s) triggers ALERT and callback."""
-        self.sm.update(254.9)
+        """Inactivity of 250s (10s + 240s) triggers ALERT and callback."""
+        self.sm.update(249.9)
         self.assertEqual(self.sm.state, STATE_COUNTDOWN)
 
         # 4 minutes reached!
-        self.sm.update(255.0)
+        self.sm.update(250.0)
         self.assertEqual(self.sm.state, STATE_ALERT)
         self.assertEqual(self.alert_triggered_count, 1)
         self.assertEqual(self.sm.countdown_remaining, 0.0)
@@ -159,7 +159,7 @@ class TestWakeWidget(unittest.TestCase):
     def test_config_serialization(self) -> None:
         """Configuration roundtrip check."""
         cfg = WidgetConfig(
-            idle_delay_seconds=15.0,
+            idle_delay_seconds=10.0,
             timer_duration_seconds=240.0,
             sound_enabled=True,
             top_bar_mode=True,
@@ -169,7 +169,7 @@ class TestWakeWidget(unittest.TestCase):
         )
         d = cfg.to_dict()
         restored = WidgetConfig.from_dict(d)
-        self.assertEqual(restored.idle_delay_seconds, 15.0)
+        self.assertEqual(restored.idle_delay_seconds, 10.0)
         self.assertEqual(restored.timer_duration_seconds, 240.0)
         self.assertTrue(restored.top_bar_mode)
         self.assertEqual(restored.top_bar_x, 1324)

@@ -7,8 +7,8 @@ APP_NAME = 'Wake Widget'
 APP_ID = 'ma.1337.wake-widget'
 
 # Core timings requested by user
-# 1. User inactive for 15 seconds -> starts 4-minute timer
-DEFAULT_IDLE_DELAY_SECONDS = 15.0
+# 1. User inactive for 10 seconds -> starts 4-minute timer
+DEFAULT_IDLE_DELAY_SECONDS = 10.0
 # 2. 4-minute timer -> 240 seconds
 DEFAULT_TIMER_DURATION_SECONDS = 240.0
 # Ticking rate during alert (1 second tick-tock)

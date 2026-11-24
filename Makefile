@@ -14,7 +14,7 @@ all: run
 run:
 	@pkill -f "wake-widgit/[r]un.py" 2>/dev/null || true
 	@setsid python3 "$(CURDIR)/run.py" </dev/null >/dev/null 2>&1 &
-	@echo "✔ Wake Widget started in standard mode (15s inactivity -> 4min timer -> alert ticking)!"
+	@echo "✔ Wake Widget started in standard mode (10s inactivity -> 4min timer -> alert ticking)!"
 
 fast-test:
 	@pkill -f "wake-widgit/[r]un.py" 2>/dev/null || true
@@ -52,7 +52,7 @@ uninstall: stop
 
 help:
 	@echo "Available commands:"
-	@echo "  make run        - Start widget in standard mode (15s idle -> 4m timer -> tick)"
+	@echo "  make run        - Start widget in standard mode (10s idle -> 4m timer -> tick)"
 	@echo "  make fast-test  - Run fast test demonstration (3s idle -> 5s timer -> tick)"
 	@echo "  make sim-alert  - Trigger alert ticking sound & notification immediately"
 	@echo "  make stop       - Stop all running widget instances"
