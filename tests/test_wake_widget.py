@@ -151,6 +151,8 @@ class TestWakeWidget(unittest.TestCase):
             idle_delay_seconds=15.0,
             timer_duration_seconds=240.0,
             sound_enabled=True,
+            top_bar_mode=True,
+            top_bar_x=1324,
             widget_x=120,
             widget_y=80,
         )
@@ -158,6 +160,8 @@ class TestWakeWidget(unittest.TestCase):
         restored = WidgetConfig.from_dict(d)
         self.assertEqual(restored.idle_delay_seconds, 15.0)
         self.assertEqual(restored.timer_duration_seconds, 240.0)
+        self.assertTrue(restored.top_bar_mode)
+        self.assertEqual(restored.top_bar_x, 1324)
         self.assertEqual(restored.widget_x, 120)
         self.assertEqual(restored.widget_y, 80)
 

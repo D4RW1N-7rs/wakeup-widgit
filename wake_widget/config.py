@@ -13,6 +13,23 @@ from wake_widget.constants import (
     DEFAULT_TIMER_DURATION_SECONDS,
 )
 
+XATTENDO_CONFIG_FILE = os.path.expanduser('~/.config/xattendo-widget/config.json')
+
+
+def _resolve_default_top_bar_x() -> int:
+    """If xattendo-widget is configured in top-bar mode, position wake-widget directly beside it with an 8px gap."""
+    try:
+        if os.path.isfile(XATTENDO_CONFIG_FILE):
+            with open(XATTENDO_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                xattendo_x = data.get('topBarX')
+                if isinstance(xattendo_x, int) and xattendo_x > 120:
+                    # Place 89px to the left of xattendo widget (81px pill + 8px gap)
+                    return xattendo_x - 89
+    except Exception:
+        pass
+    return 1331
+
 
 @dataclass
 class WidgetConfig:
@@ -21,6 +38,8 @@ class WidgetConfig:
     tick_interval_seconds: float = DEFAULT_TICK_INTERVAL_SECONDS
     sound_enabled: bool = True
     notification_enabled: bool = True
+    top_bar_mode: bool = True
+    top_bar_x: Optional[int] = None
     widget_x: Optional[int] = None
     widget_y: Optional[int] = None
     always_on_top: bool = True
@@ -32,6 +51,8 @@ class WidgetConfig:
             'tickIntervalSeconds': self.tick_interval_seconds,
             'soundEnabled': self.sound_enabled,
             'notificationEnabled': self.notification_enabled,
+            'topBarMode': self.top_bar_mode,
+            'topBarX': self.top_bar_x,
             'widgetX': self.widget_x,
             'widgetY': self.widget_y,
             'alwaysOnTop': self.always_on_top,
@@ -57,12 +78,18 @@ class WidgetConfig:
             tick_s = DEFAULT_TICK_INTERVAL_SECONDS
         tick_s = max(0.1, min(10.0, tick_s))
 
+        top_bar_x = data.get('topBarX')
+        if top_bar_x is None:
+            top_bar_x = _resolve_default_top_bar_x()
+
         return cls(
             idle_delay_seconds=idle_s,
             timer_duration_seconds=timer_s,
             tick_interval_seconds=tick_s,
             sound_enabled=bool(data.get('soundEnabled', True)),
             notification_enabled=bool(data.get('notificationEnabled', True)),
+            top_bar_mode=bool(data.get('topBarMode', True)),
+            top_bar_x=top_bar_x,
             widget_x=data.get('widgetX'),
             widget_y=data.get('widgetY'),
             always_on_top=bool(data.get('alwaysOnTop', True)),
@@ -82,7 +109,10 @@ class ConfigService:
                     return WidgetConfig.from_dict(data)
             except Exception:
                 pass
-        return WidgetConfig()
+        cfg = WidgetConfig()
+        if cfg.top_bar_x is None:
+            cfg.top_bar_x = _resolve_default_top_bar_x()
+        return cfg
 
     def save(self) -> None:
         try:
@@ -93,7 +123,12 @@ class ConfigService:
             pass
 
     def update_position(self, x: int, y: int) -> None:
-        if self.config.widget_x != x or self.config.widget_y != y:
-            self.config.widget_x = x
-            self.config.widget_y = y
-            self.save()
+        if self.config.top_bar_mode:
+            if self.config.top_bar_x != x:
+                self.config.top_bar_x = x
+                self.save()
+        else:
+            if self.config.widget_x != x or self.config.widget_y != y:
+                self.config.widget_x = x
+                self.config.widget_y = y
+                self.save()
