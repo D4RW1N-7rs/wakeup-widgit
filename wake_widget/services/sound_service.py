@@ -138,21 +138,10 @@ class SoundService:
         return True
 
     def _ticking_worker(self) -> None:
-        # Play alert chime once at the start of alert
-        if self._is_ticking and os.path.exists(CHIME_SOUND_PATH):
-            self.play_file(CHIME_SOUND_PATH, block=False)
-            if not self._sleep_interruptible(0.5):
-                return
-
-        # Alternating Tick ... Tock loop
-        is_tick = True
-        interval = max(0.2, self.tick_interval)
+        interval = max(0.5, self.tick_interval)
 
         while self._is_ticking:
-            sound_path = TICK_SOUND_PATH if is_tick else TOCK_SOUND_PATH
-            if os.path.exists(sound_path):
-                self.play_file(sound_path, block=False)
-
-            is_tick = not is_tick
+            if os.path.exists(CHIME_SOUND_PATH):
+                self.play_file(CHIME_SOUND_PATH, block=False)
             if not self._sleep_interruptible(interval):
                 break
