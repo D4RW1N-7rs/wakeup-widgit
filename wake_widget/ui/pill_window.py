@@ -400,11 +400,17 @@ class PillWindow(Gtk.Window):
             return True
         return False
 
+    def _on_toggle_test_alert(self) -> None:
+        self.state_machine.toggle_test_alert()
+        if hasattr(self, 'popup_win') and self.popup_win.get_visible():
+            self.popup_win.update_state(self.state_machine, self.config.sound_enabled)
+
     def _show_context_menu(self, event: Optional[Gdk.EventButton] = None) -> None:
         menu = Gtk.Menu()
 
-        item_test = Gtk.MenuItem(label='🔔 Test Alert Now')
-        item_test.connect('activate', lambda _: self.state_machine.trigger_test_alert())
+        test_lbl = '⏹ Stop Test Alert' if self.state_machine.is_test_alert_active else '🔔 Test Alert Now'
+        item_test = Gtk.MenuItem(label=test_lbl)
+        item_test.connect('activate', lambda _: self._on_toggle_test_alert())
         menu.append(item_test)
 
         item_reset = Gtk.MenuItem(label='🔄 Reset Timer')

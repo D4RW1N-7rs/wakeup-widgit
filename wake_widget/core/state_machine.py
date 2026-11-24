@@ -38,14 +38,23 @@ class WakeStateMachine:
         self.countdown_progress: float = 0.0
         self.gate_progress: float = 0.0
 
+        self.is_test_alert_active: bool = False
         self._last_idle_seconds: float = 0.0
-        self._force_alert: bool = False
         self._alert_start_time: float = 0.0
 
-    def trigger_test_alert(self) -> None:
-        """Manually trigger alert state for testing sounds and notifications."""
+    def toggle_test_alert(self) -> bool:
+        """Toggle test alert mode. Keeps working continuously until clicked again."""
+        if self.is_test_alert_active:
+            self.stop_test_alert()
+            return False
+        else:
+            self.start_test_alert()
+            return True
+
+    def start_test_alert(self) -> None:
+        """Starts test alert and keeps it active until explicitly stopped."""
         old_state = self.state
-        self._force_alert = True
+        self.is_test_alert_active = True
         self.state = STATE_ALERT
         self.countdown_remaining = 0.0
         self.countdown_progress = 1.0
@@ -53,41 +62,65 @@ class WakeStateMachine:
         self._alert_start_time = time.monotonic()
         if old_state != STATE_ALERT and self.on_alert_triggered:
             self.on_alert_triggered()
-        if old_state != self.state and self.on_state_changed:
-            self.on_state_changed(old_state, self.state)
+        if old_state != STATE_ALERT and self.on_state_changed:
+            self.on_state_changed(old_state, STATE_ALERT)
+
+    def stop_test_alert(self) -> None:
+        """Stops test alert and returns to normal active tracking."""
+        if not self.is_test_alert_active:
+            return
+        self.is_test_alert_active = False
+        self.state = STATE_ACTIVE
+        self.countdown_remaining = self.timer_duration_seconds
+        self.countdown_progress = 0.0
+        self.gate_progress = 0.0
+        if self.on_alert_dismissed:
+            self.on_alert_dismissed()
+        if self.on_state_changed:
+            self.on_state_changed(STATE_ALERT, STATE_ACTIVE)
+
+    # Backward compatibility alias
+    trigger_test_alert = toggle_test_alert
 
     def reset(self) -> None:
         """Reset state machine back to start (STATE_ACTIVE)."""
         old_state = self.state
-        if old_state == STATE_ALERT and self.on_alert_dismissed:
-            self.on_alert_dismissed()
-        self._force_alert = False
+        was_test = self.is_test_alert_active
+        self.is_test_alert_active = False
         self.state = STATE_ACTIVE
         self.countdown_remaining = self.timer_duration_seconds
         self.countdown_progress = 0.0
         self.gate_progress = 0.0
         self._last_idle_seconds = 0.0
+
+        if (old_state == STATE_ALERT or was_test) and self.on_alert_dismissed:
+            self.on_alert_dismissed()
         if old_state != STATE_ACTIVE and self.on_state_changed:
             self.on_state_changed(old_state, STATE_ACTIVE)
 
     def update(self, idle_seconds: float) -> str:
-        """Update state machine with latest measured idle time in seconds.
-
-        Returns the current state.
-        """
+        """Update state machine with latest measured idle time in seconds."""
         self.idle_seconds = max(0.0, idle_seconds)
         old_state = self.state
 
-        # User activity detected if idle dropped significantly or is near 0
+        # 1. If manual test alert is active, it stays active UNTIL clicked again!
+        if self.is_test_alert_active:
+            self.state = STATE_ALERT
+            self.countdown_remaining = 0.0
+            self.countdown_progress = 1.0
+            self.gate_progress = 1.0
+            self._last_idle_seconds = self.idle_seconds
+            return self.state
+
+        # 2. Normal monitoring: detect user mouse/keyboard activity
         activity_detected = (
             self.idle_seconds < 0.25
             or (self.idle_seconds + 0.3) < self._last_idle_seconds
         )
 
         if activity_detected:
-            # If user was in test alert or normal alert, dismiss it
-            if self.state == STATE_ALERT or self._force_alert:
-                self._force_alert = False
+            # Dismiss automatic inactivity alert when user returns
+            if self.state == STATE_ALERT:
                 if self.on_alert_dismissed:
                     self.on_alert_dismissed()
             if self.on_activity_detected:
@@ -103,16 +136,7 @@ class WakeStateMachine:
                 self.on_state_changed(old_state, STATE_ACTIVE)
             return self.state
 
-        # If forced alert is active, remain in alert until user activity
-        if self._force_alert:
-            self.state = STATE_ALERT
-            self.countdown_remaining = 0.0
-            self.countdown_progress = 1.0
-            self.gate_progress = 1.0
-            self._last_idle_seconds = self.idle_seconds
-            return self.state
-
-        # Determine state based on idle progression
+        # 3. Inactivity progression
         if self.idle_seconds < self.idle_delay_seconds:
             # Stage 1: Active / Inactivity grace period (does nothing until 15s)
             self.state = STATE_ACTIVE

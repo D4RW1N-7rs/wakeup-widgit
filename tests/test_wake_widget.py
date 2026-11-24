@@ -104,14 +104,25 @@ class TestWakeWidget(unittest.TestCase):
         self.assertEqual(self.alert_dismissed_count, 1)
         self.assertEqual(self.sm.countdown_remaining, 240.0)
 
-    def test_manual_test_alert_and_reset(self) -> None:
-        """Manual test alert triggers immediately and clears on activity."""
-        self.sm.trigger_test_alert()
+    def test_manual_test_alert_persists_until_clicked_again(self) -> None:
+        """Manual test alert keeps working across mouse/keyboard activity until clicked again."""
+        # Start test alert
+        active = self.sm.toggle_test_alert()
+        self.assertTrue(active)
+        self.assertTrue(self.sm.is_test_alert_active)
         self.assertEqual(self.sm.state, STATE_ALERT)
         self.assertEqual(self.alert_triggered_count, 1)
 
-        # Activity clears test alert
+        # Mouse motion / typing occurs (idle drops to 0) -> test alert KEEPS WORKING!
         self.sm.update(0.0)
+        self.assertEqual(self.sm.state, STATE_ALERT)
+        self.assertTrue(self.sm.is_test_alert_active)
+        self.assertEqual(self.alert_dismissed_count, 0)
+
+        # User clicks again -> stops test alert and returns to active
+        active = self.sm.toggle_test_alert()
+        self.assertFalse(active)
+        self.assertFalse(self.sm.is_test_alert_active)
         self.assertEqual(self.sm.state, STATE_ACTIVE)
         self.assertEqual(self.alert_dismissed_count, 1)
 

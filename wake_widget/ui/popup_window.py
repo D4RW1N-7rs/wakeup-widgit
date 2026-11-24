@@ -136,8 +136,21 @@ class PopupWindow(Gtk.Window):
         self.badge.get_style_context().add_class(f'wake-badge-{sm.state}')
         self.badge.set_text(sm.state.upper())
 
+        # Update test button label and style
+        if sm.is_test_alert_active:
+            self.btn_test.set_label('⏹ Stop Test')
+            self.btn_test.get_style_context().remove_class('wake-btn-primary')
+            self.btn_test.get_style_context().add_class('wake-btn-danger')
+        else:
+            self.btn_test.set_label('🔔 Test Alert')
+            self.btn_test.get_style_context().remove_class('wake-btn-danger')
+            self.btn_test.get_style_context().add_class('wake-btn-primary')
+
         # Update clock
-        if sm.state == STATE_ACTIVE:
+        if sm.is_test_alert_active:
+            self.lbl_big_clock.set_text('00:00')
+            self.lbl_desc.set_text('🔔 Test alert active! Click "Stop Test" to stop.')
+        elif sm.state == STATE_ACTIVE:
             self.lbl_big_clock.set_text(format_mmss(sm.timer_duration_seconds))
             idle_s = int(sm.idle_seconds)
             gate_s = int(sm.idle_delay_seconds)
