@@ -13,22 +13,20 @@ from wake_widget.constants import (
     DEFAULT_TIMER_DURATION_SECONDS,
 )
 
-XATTENDO_CONFIG_FILE = os.path.expanduser('~/.config/xattendo-widget/config.json')
-
-
 def _resolve_default_top_bar_x() -> int:
-    """If xattendo-widget is configured in top-bar mode, position wake-widget directly beside it with an 8px gap."""
+    """Pick a sensible default X position in the top bar (right-of-center area)."""
     try:
-        if os.path.isfile(XATTENDO_CONFIG_FILE):
-            with open(XATTENDO_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                xattendo_x = data.get('topBarX')
-                if isinstance(xattendo_x, int) and xattendo_x > 120:
-                    # Place 89px to the left of xattendo widget (81px pill + 8px gap)
-                    return xattendo_x - 89
+        import subprocess
+        out = subprocess.check_output(
+            ['xdpyinfo'], stderr=subprocess.DEVNULL, timeout=2
+        ).decode()
+        for line in out.splitlines():
+            if 'dimensions:' in line:
+                w = int(line.split()[1].split('x')[0])
+                return max(0, w - 200)  # 200px from right edge
     except Exception:
         pass
-    return 1331
+    return 1200
 
 
 @dataclass

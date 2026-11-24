@@ -11,7 +11,7 @@ window.wake-transparent {
     background-color: transparent;
 }
 
-/* Base Top-Bar Pill (matches xattendo-pill) */
+/* Base Top-Bar Pill */
 .wake-pill {
     background-color: #1f2226;
     border: 1px solid #32373d;
