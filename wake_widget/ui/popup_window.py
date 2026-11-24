@@ -36,6 +36,7 @@ class PopupWindow(Gtk.Window):
         self.on_reset = on_reset
         self.on_toggle_sound = on_toggle_sound
         self.on_quit = on_quit
+        self._opened_at: float = 0.0
 
         self.get_style_context().add_class('wake-transparent')
         self.set_decorated(False)
@@ -93,29 +94,38 @@ class PopupWindow(Gtk.Window):
         # Buttons
         btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
 
-        btn_test = Gtk.Button(label='🔔 Test Alert')
-        btn_test.get_style_context().add_class('wake-btn')
-        btn_test.get_style_context().add_class('wake-btn-primary')
-        btn_test.connect('clicked', lambda _: self.on_test_alert())
-        btn_box.pack_start(btn_test, True, True, 0)
+        self.btn_test = Gtk.Button(label='🔔 Test Alert')
+        self.btn_test.get_style_context().add_class('wake-btn')
+        self.btn_test.get_style_context().add_class('wake-btn-primary')
+        self.btn_test.connect('clicked', self._on_btn_test_clicked)
+        btn_box.pack_start(self.btn_test, True, True, 0)
 
-        btn_reset = Gtk.Button(label='🔄 Reset')
-        btn_reset.get_style_context().add_class('wake-btn')
-        btn_reset.connect('clicked', lambda _: self.on_reset())
-        btn_box.pack_start(btn_reset, True, True, 0)
+        self.btn_reset = Gtk.Button(label='🔄 Reset')
+        self.btn_reset.get_style_context().add_class('wake-btn')
+        self.btn_reset.connect('clicked', self._on_btn_reset_clicked)
+        btn_box.pack_start(self.btn_reset, True, True, 0)
 
         self.btn_sound = Gtk.Button(label='🔊 Sound')
         self.btn_sound.get_style_context().add_class('wake-btn')
-        self.btn_sound.connect('clicked', lambda _: self.on_toggle_sound())
+        self.btn_sound.connect('clicked', self._on_btn_sound_clicked)
         btn_box.pack_start(self.btn_sound, True, True, 0)
 
-        btn_close = Gtk.Button(label='✕ Close')
-        btn_close.get_style_context().add_class('wake-btn')
-        btn_close.get_style_context().add_class('wake-btn-danger')
-        btn_close.connect('clicked', lambda _: self.hide())
-        btn_box.pack_start(btn_close, False, False, 0)
+        self.btn_close = Gtk.Button(label='✕ Close')
+        self.btn_close.get_style_context().add_class('wake-btn')
+        self.btn_close.get_style_context().add_class('wake-btn-danger')
+        self.btn_close.connect('clicked', lambda _: self.hide())
+        btn_box.pack_start(self.btn_close, False, False, 0)
 
         card.pack_start(btn_box, False, False, 2)
+
+    def _on_btn_test_clicked(self, _btn: Gtk.Button) -> None:
+        self.on_test_alert()
+
+    def _on_btn_reset_clicked(self, _btn: Gtk.Button) -> None:
+        self.on_reset()
+
+    def _on_btn_sound_clicked(self, _btn: Gtk.Button) -> None:
+        self.on_toggle_sound()
 
     def update_state(self, sm: WakeStateMachine, sound_enabled: bool) -> None:
         self.ring.set_data(sm.state, sm.countdown_progress)
@@ -165,6 +175,7 @@ class PopupWindow(Gtk.Window):
             self.hide()
             return
         self.update_state(sm, sound_enabled)
+        self._opened_at = time.monotonic()
         self.show_all()
         self.update_state(sm, sound_enabled)
         self.position_near(anchor_window)
@@ -177,5 +188,7 @@ class PopupWindow(Gtk.Window):
         return False
 
     def _on_focus_out(self, _widget: Gtk.Widget, _event: Gdk.EventFocus) -> bool:
+        if not self.get_visible() or (time.monotonic() - getattr(self, '_opened_at', 0.0)) < 0.3:
+            return False
         self.hide()
         return False

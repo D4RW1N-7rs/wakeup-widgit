@@ -13,17 +13,17 @@ all: run
 
 run:
 	@pkill -f "wake-widgit/[r]un.py" 2>/dev/null || true
-	@nohup python3 "$(CURDIR)/run.py" </dev/null >/dev/null 2>&1 &
+	@setsid python3 "$(CURDIR)/run.py" </dev/null >/dev/null 2>&1 &
 	@echo "✔ Wake Widget started in standard mode (15s inactivity -> 4min timer -> alert ticking)!"
 
 fast-test:
 	@pkill -f "wake-widgit/[r]un.py" 2>/dev/null || true
-	@nohup python3 "$(CURDIR)/run.py" --fast-test </dev/null >/dev/null 2>&1 &
+	@setsid python3 "$(CURDIR)/run.py" --fast-test </dev/null >/dev/null 2>&1 &
 	@echo "✔ Wake Widget started in Fast Test mode (3s inactivity -> 5s timer -> alert ticking)!"
 
 sim-alert:
 	@pkill -f "wake-widgit/[r]un.py" 2>/dev/null || true
-	@nohup python3 "$(CURDIR)/run.py" --test-alert </dev/null >/dev/null 2>&1 &
+	@setsid python3 "$(CURDIR)/run.py" --test-alert </dev/null >/dev/null 2>&1 &
 	@echo "✔ Wake Widget started with immediate alert ticking sound & notification!"
 
 stop:

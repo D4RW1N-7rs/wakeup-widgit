@@ -215,21 +215,24 @@ class PillWindow(Gtk.Window):
         return False
 
     def _on_tick(self) -> bool:
-        idle_seconds = self.activity_monitor.get_idle_seconds()
-        state = self.state_machine.update(idle_seconds)
+        try:
+            idle_seconds = self.activity_monitor.get_idle_seconds()
+            state = self.state_machine.update(idle_seconds)
 
-        if state == STATE_ACTIVE:
-            self.time_lbl.set_text(format_mmss(self.state_machine.timer_duration_seconds))
-            self.ring.set_data(STATE_ACTIVE, 0.0)
-        elif state == STATE_COUNTDOWN:
-            self.time_lbl.set_text(format_mmss(self.state_machine.countdown_remaining))
-            self.ring.set_data(STATE_COUNTDOWN, self.state_machine.countdown_progress)
-        else:
-            self.time_lbl.set_text('00:00')
-            self.ring.set_data(STATE_ALERT, 1.0)
+            if state == STATE_ACTIVE:
+                self.time_lbl.set_text(format_mmss(self.state_machine.timer_duration_seconds))
+                self.ring.set_data(STATE_ACTIVE, 0.0)
+            elif state == STATE_COUNTDOWN:
+                self.time_lbl.set_text(format_mmss(self.state_machine.countdown_remaining))
+                self.ring.set_data(STATE_COUNTDOWN, self.state_machine.countdown_progress)
+            else:
+                self.time_lbl.set_text('00:00')
+                self.ring.set_data(STATE_ALERT, 1.0)
 
-        if self.popup_win.get_visible():
-            self.popup_win.update_state(self.state_machine, self.config.sound_enabled)
+            if hasattr(self, 'popup_win') and self.popup_win and self.popup_win.get_visible():
+                self.popup_win.update_state(self.state_machine, self.config.sound_enabled)
+        except Exception:
+            pass
 
         return True
 
@@ -285,13 +288,35 @@ class PillWindow(Gtk.Window):
         else:
             ctx.remove_class('wake-pill-hover')
 
+    def _hit_test_popup(self, lx: int, ly: int) -> bool:
+        if not hasattr(self, 'popup_win') or not self.popup_win or not self.popup_win.get_visible():
+            return False
+        px, py = self.popup_win.get_position()
+        pw, ph = self.popup_win.get_size()
+        return (px <= lx <= px + pw) and (py <= ly <= py + ph)
+
     def _on_raw_button_press(self, button: int, rx_px: int, ry_px: int) -> None:
         lx, ly = self._x11_to_logical(rx_px, ry_px)
-        if not self._hit_test_top_bar(lx, ly):
-            if self.popup_win.get_visible():
-                self.popup_win.hide()
+        geo, panel_h = self._get_monitor_metrics()
+        in_top_bar = geo.y <= ly <= (geo.y + panel_h)
+
+        # 1. If click is inside the popup window itself, let GTK handle button clicks!
+        if self._hit_test_popup(lx, ly):
             return
 
+        # 2. If click is in top bar but outside our pill, close the popup if open
+        if in_top_bar and hasattr(self, 'popup_win') and self.popup_win.get_visible() and not self._hit_test_top_bar(lx, ly):
+            self.popup_win.hide()
+            return
+
+        # 3. If click is outside the top bar entirely and popup is open, close popup on click-away
+        if not self._hit_test_top_bar(lx, ly):
+            if hasattr(self, 'popup_win') and self.popup_win.get_visible():
+                if (time.monotonic() - getattr(self.popup_win, '_opened_at', 0.0)) > 0.3:
+                    self.popup_win.hide()
+            return
+
+        # 4. Click is directly on our top bar pill
         if button in (1, 2):
             self._raw_dragging = True
             self._raw_drag_button = button
@@ -300,7 +325,8 @@ class PillWindow(Gtk.Window):
             self._raw_drag_start_y = ly
             self._raw_win_start_x = self._pos_x
         elif button == 3:
-            self.popup_win.hide()
+            if hasattr(self, 'popup_win'):
+                self.popup_win.hide()
             self._show_context_menu()
 
     def _on_raw_motion(self, rx_px: int, ry_px: int, mask: int) -> None:
