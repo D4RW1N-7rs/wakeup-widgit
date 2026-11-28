@@ -94,23 +94,23 @@ class PopupWindow(Gtk.Window):
         # Buttons
         btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
 
-        self.btn_test = Gtk.Button(label='🔔 Test Alert')
+        self.btn_test = Gtk.Button(label='* Test Alert')
         self.btn_test.get_style_context().add_class('wake-btn')
         self.btn_test.get_style_context().add_class('wake-btn-primary')
         self.btn_test.connect('clicked', self._on_btn_test_clicked)
         btn_box.pack_start(self.btn_test, True, True, 0)
 
-        self.btn_reset = Gtk.Button(label='🔄 Reset')
+        self.btn_reset = Gtk.Button(label='↺ Reset')
         self.btn_reset.get_style_context().add_class('wake-btn')
         self.btn_reset.connect('clicked', self._on_btn_reset_clicked)
         btn_box.pack_start(self.btn_reset, True, True, 0)
 
-        self.btn_sound = Gtk.Button(label='🔊 Sound')
+        self.btn_sound = Gtk.Button(label='Sound: ON')
         self.btn_sound.get_style_context().add_class('wake-btn')
         self.btn_sound.connect('clicked', self._on_btn_sound_clicked)
         btn_box.pack_start(self.btn_sound, True, True, 0)
 
-        self.btn_close = Gtk.Button(label='✕ Close')
+        self.btn_close = Gtk.Button(label='x Close')
         self.btn_close.get_style_context().add_class('wake-btn')
         self.btn_close.get_style_context().add_class('wake-btn-danger')
         self.btn_close.connect('clicked', lambda _: self.hide())
@@ -138,31 +138,31 @@ class PopupWindow(Gtk.Window):
 
         # Update test button label and style
         if sm.is_test_alert_active:
-            self.btn_test.set_label('⏹ Stop Test')
+            self.btn_test.set_label('[ ] Stop Test')
             self.btn_test.get_style_context().remove_class('wake-btn-primary')
             self.btn_test.get_style_context().add_class('wake-btn-danger')
         else:
-            self.btn_test.set_label('🔔 Test Alert')
+            self.btn_test.set_label('* Test Alert')
             self.btn_test.get_style_context().remove_class('wake-btn-danger')
             self.btn_test.get_style_context().add_class('wake-btn-primary')
 
         # Update clock
         if sm.is_test_alert_active:
             self.lbl_big_clock.set_text('00:00')
-            self.lbl_desc.set_text('🔔 Test alert active! Click "Stop Test" to stop.')
+            self.lbl_desc.set_text('* Test alert active! Click "Stop Test" to stop.')
         elif sm.state == STATE_ACTIVE:
             self.lbl_big_clock.set_text(format_mmss(sm.timer_duration_seconds))
             idle_s = int(sm.idle_seconds)
             gate_s = int(sm.idle_delay_seconds)
-            self.lbl_desc.set_text(f'Waiting for 15s idle ({idle_s}s / {gate_s}s)')
+            self.lbl_desc.set_text(f'Waiting for {gate_s}s idle ({idle_s}s / {gate_s}s)')
         elif sm.state == STATE_COUNTDOWN:
             self.lbl_big_clock.set_text(format_mmss(sm.countdown_remaining))
             self.lbl_desc.set_text('4-min timer running down!')
         else:
             self.lbl_big_clock.set_text('00:00')
-            self.lbl_desc.set_text('⚠️ Inactive! Ticking active.')
+            self.lbl_desc.set_text('!! Inactive! Ticking active.')
 
-        self.btn_sound.set_label('🔊 Sound: ON' if sound_enabled else '🔇 Sound: OFF')
+        self.btn_sound.set_label('Sound: ON' if sound_enabled else 'Sound: OFF')
 
     def position_near(self, anchor_window: Gtk.Window) -> None:
         display = Gdk.Display.get_default()
